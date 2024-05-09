@@ -67,15 +67,22 @@
 // Die rekursive raytracing-Methode. Am besten ab einer bestimmten Rekursionstiefe (z.B. als Parameter übergeben) abbrechen.
 
 
-bool hit_sphere(const Vector3df center, float radius, const Ray3df r) {
+Intersection_Context<float, 3> hit_sphere(const Vector3df center, float radius, const Ray3df r) {
     Sphere3df sphere = {center, radius};
-    return sphere.intersects(r)> 0;
+    Intersection_Context<float, 3> context;
+    context.t = -INFINITY;
+    sphere.intersects(r,context);
+    return context;
 }
 
 template<class FLOAT, size_t N>
 color ray_color(const Ray3df r) {
-    if (hit_sphere(Vector3df({0, 0, -1}), 0.5, r)) {
-        return color({1, 0, 0});
+
+    Intersection_Context context = hit_sphere(Vector3df ({0,0,-1}), 0.5, r);
+    if (context.t > 0.0) {
+        Vector3df n = context.normal;
+
+        return 0.5f * color({n[0]+1, n[1]+1, n[2]+1});
     }
 
     Vector3df normalizedVector = r.direction;
@@ -114,13 +121,13 @@ int main(void) {
     auto viewport_v = Vector3df({0, -viewport_height, 0});
 
     // Calculate the horizontal and vertical delta vectors from pixel to pixel.
-    auto pixel_delta_u = viewport_u /= float(image_width);
-    auto pixel_delta_v = viewport_v /= float(image_height);
+    auto pixel_delta_u = (1 / float(image_width)) * viewport_u;
+    auto pixel_delta_v = (1 / float(image_height)) * viewport_v;
 
     // Calculate the location of the upper left pixel.
     auto viewport_upper_left = camera_center
-                               - Vector3df({0, 0, focal_length}) - (viewport_u /= 2) - (viewport_v /= 2);
-    auto pixel00_loc = viewport_upper_left += 0.5f * (pixel_delta_u + pixel_delta_v);
+                               - Vector3df({0, 0, focal_length}) - ((1 / 2.f) * viewport_u) - ((1 / 2.f) * viewport_v);
+    auto pixel00_loc = viewport_upper_left + 0.5f * (pixel_delta_u + pixel_delta_v);
 
     // Render
 
